@@ -37,7 +37,7 @@ ui <- fluidPage(
                  selectInput("model",
                              "Select Car Model:",
                              choices = unique(car_data$Model)),
-                 radioButtons("color", "Pick a color",
+                 radioButtons("scatter_color", "Pick a color",
                               choices = c("red", "orange", "green",
                                                "blue","purple"))
                ),
@@ -54,7 +54,7 @@ ui <- fluidPage(
                              min = 0, 
                              max = 115000, 
                              value = 20000),
-                 radioButtons("color", "Choose color",
+                 radioButtons("bar_color", "Choose color",
                               choices = c("skyblue", "lawngreen", "red", "purple", "gold"))
                ),
                mainPanel(
@@ -88,19 +88,32 @@ server <- function(input, output){
       sample_n(10)
   })
   
+  # Initialize a global variable for the slope
+  slope <- NULL
+  
+  # Define the scatter plot output
   output$scatter_plot <- renderPlot({
     model_data <- car_data %>%
       filter(!grepl('Not available', Mileage)) %>%
       filter(Model == input$model) %>% 
       mutate(Mileage = as.numeric(str_replace_all(Mileage, "[^[:digit:]]", "")),
              Price = as.numeric(str_replace_all(Price, "[^[:digit:]]", ""))) %>%
-      na.omit() %>% 
-      ggplot(aes(x = as.integer(gsub(" mi.", "", Mileage)), y = as.integer(gsub("$", "", Price)))) +
-      geom_point(col = input$color) +
-      labs(x = "Mileage of Car (in miles)", y = "Price of Car (in $)", title = "Car Price vs Mileage")
-    model_data
+      na.omit()
+    p <- ggplot(model_data, aes(x = as.integer(gsub(" mi.", "", Mileage)), y = as.integer(gsub("$", "", Price)))) +
+      geom_point(col = input$scatter_color) +
+      labs(x = "Mileage of Car (in miles)", y = "Price of Car (in $)", 
+           title = "Car Price vs Mileage for various car models")
+    if (nrow(model_data) > 1) {  # check number of data points
+      # Update the global slope variable
+      slope <<- round(coef(summary(lm(Price ~ Mileage, data = model_data)))[2, 1], 2)
+      p <- p + geom_smooth(method = "lm", se = FALSE) +  # add linear regression line
+        geom_text(x = Inf, y = Inf, hjust = 1, vjust = 1, 
+                  label = paste0("Slope: ", slope))  # add slope value
+    }
+    p
   })
   
+  # Define the scatter plot summary output
   output$scatter_plot_summary <- renderText({
     model_data <- car_data %>%
       filter(!grepl('Not available', Mileage)) %>% 
@@ -108,15 +121,30 @@ server <- function(input, output){
     n_total <- nrow(model_data)
     if (is.na(max(model_data$Price)) || is.na(min(model_data$Price)) || is.na(max(model_data$Mileage)))
     {
-      paste0("There are ", n_total, " " , input$model, "s that have available data.")
+      paste0("There are ", n_total, " " , input$model, "s that have available data. 
+          Due to this, we are unable to provide a graph comparing car price and mileage driven.
+          However, check again later to see new information regarding the ", input$model, ".")
     }
     else
     {
-      paste0("There are ", n_total, " " , input$model, "s that have available data. ",
-             "The most expensive one costs ", max(model_data$Price), " and the cheapest one costs ", min(model_data$Price), 
-             ". The ", input$model, " with the highest mileage has driven ", max(model_data$Mileage))
+      output_text <- paste0("There are ", n_total, " " , input$model, "s that have available data. ",
+                            "The most expensive one costs ", max(model_data$Price), " and the cheapest one costs ", min(model_data$Price), 
+                            ". The ", input$model, " with the highest mileage has driven ", max(model_data$Mileage))
+      if (!is.null(slope) && slope < 0)
+      {
+        output_text <- paste0(output_text, " Given that we have a negative slope of ", slope, 
+                              ", we can see the general trend that as the mileage increases, the price decreases.")
+      }
+      if (!is.null(slope) && slope >= 0)
+      {
+        output_text <- paste0(output_text, " Given that we have a positive slope of ", slope, ", the ", input$model, " goes against the general trend that 
+                              as the mileage increases, the price decreases.")
+      }
+      output_text
     }
   })
+  
+  
   
   output$bar_plot <- renderPlot({
     mileage_data <- car_data %>%
@@ -125,8 +153,8 @@ server <- function(input, output){
              Price = as.numeric(str_replace_all(Price, "[^[:digit:]]", ""))) %>%
       na.omit() %>% 
       ggplot(aes(Year, Price)) +
-      geom_col(col=input$color) +
-      ggtitle(paste("The status of cars given the maximum mileage entered, along with the year of the car"))
+      geom_col(col=input$bar_color) +
+      ggtitle(paste("Car Price vs Manufactured Year for various mileages"))
     mileage_data
   })
   
@@ -137,7 +165,7 @@ server <- function(input, output){
     n_total <- nrow(mileage_data)
     n_missing <- sum(is.na(mileage_data$Year) | is.na(mileage_data$Status))
     n_non_missing <- n_total - n_missing
-    paste("The number of cars that have at most ", input$mileage, " miles: ", n_non_missing)
+    paste(format(n_non_missing, big.mark = ","), "cars have at most", format(input$mileage, big.mark = ","), "miles.")
   })
   
   output$table <- renderDataTable({
