@@ -35,11 +35,11 @@ ui <- fluidPage(
              sidebarLayout(
                sidebarPanel(
                  selectInput("model",
-                             "Select Car Model:",
+                             "Select A Car Model:",
                              choices = unique(car_data$Model)),
                  radioButtons("scatter_color", "Pick a color",
                               choices = c("red", "orange", "green",
-                                               "blue","purple"))
+                                               "brown","purple"))
                ),
                mainPanel(
                  plotOutput("scatter_plot"),
@@ -52,8 +52,13 @@ ui <- fluidPage(
                sidebarPanel(
                  sliderInput("mileage", "Mileage on car", 
                              min = 0, 
-                             max = 115000, 
+                             max = 150000, 
                              value = 20000),
+                 sliderInput("year_bar", "Select Your Desired Year.",
+                             min = 1967,
+                             max = 2023,
+                             value = 2000,
+                             sep = ""),
                  radioButtons("bar_color", "Choose color",
                               choices = c("skyblue", "lawngreen", "red", "purple", "gold"))
                ),
@@ -67,7 +72,7 @@ ui <- fluidPage(
              sidebarLayout(
                sidebarPanel(
                  textOutput("table_summary"),
-                 sliderInput("year", "Select your earliest year preference.",
+                 sliderInput("year_table", "Select your earliest year preference.",
                              min = 1949,
                              max = 2023,
                              value = 2000,
@@ -144,39 +149,45 @@ server <- function(input, output){
     }
   })
   
-  
-  
   output$bar_plot <- renderPlot({
     mileage_data <- car_data %>%
       filter(Mileage <= input$mileage) %>%
-      mutate(Mileage = as.numeric(str_replace_all(Mileage, "[^[:digit:]]", "")),
-             Price = as.numeric(str_replace_all(Price, "[^[:digit:]]", ""))) %>%
+      mutate(Price = as.numeric(str_replace_all(Price, "[^[:digit:]]", ""))) %>%
       na.omit() %>% 
-      ggplot(aes(Year, Price)) +
-      geom_col(col=input$bar_color) +
-      ggtitle(paste("Car Price vs Manufactured Year for various mileages"))
+      ggplot(aes(Year, Price/3450)) +
+      geom_col(col=input$bar_color) + 
+      labs(x = "Manufacture Year", y = "Average Price of Car (in $)", 
+          title = "Average Car Price vs Manufacture Year for various mileages")
     mileage_data
   })
   
-  
   output$bar_plot_summary <- renderText({
     mileage_data <- car_data %>%
-      filter(Mileage <= input$mileage)
+      filter(Mileage <= input$mileage) %>%
+      na.omit()
     n_total <- nrow(mileage_data)
     n_missing <- sum(is.na(mileage_data$Year) | is.na(mileage_data$Status))
     n_non_missing <- n_total - n_missing
-    paste(format(n_non_missing, big.mark = ","), "cars have at most", format(input$mileage, big.mark = ","), "miles.")
+    price_data <- mileage_data %>%
+      filter(Year == input$year_bar) %>% 
+      mutate(num_price = as.numeric(str_replace_all(Price, "[^[:digit:]]", ""))) %>% 
+      filter(!is.na(num_price))
+    avg_price <- mean(price_data$num_price)
+    paste0(format(n_non_missing, big.mark = ","), " cars have at most ", 
+          format(input$mileage, big.mark = ","), " miles. For ", input$year_bar,", the average price of cars under ", 
+          format(input$mileage, big.mark = ","), " miles is $", format(round(avg_price), nsmall = 0, big.mark = ","), ".")
   })
+  
   
   output$table <- renderDataTable({
     car_data %>% 
-      filter(Year >= input$year) %>% 
+      filter(Year >= input$year_table) %>% 
       arrange(Year)
   })
   
   output$table_summary <- renderText({
     year_data <- car_data %>% 
-      filter(Year >= input$year)
+      filter(Year >= input$year_table)
     n_format <- format(nrow(year_data), big.mark = ",")
     paste0("There are ", n_format, " cars that were manufactured later than ", input$year, ".")
   })
