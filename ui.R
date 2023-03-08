@@ -39,7 +39,8 @@ ui <- fluidPage(
                              choices = unique(car_data$Model)),
                  radioButtons("scatter_color", "Pick a color",
                               choices = c("red", "orange", "green",
-                                               "brown","purple"))
+                                               "brown","purple")),
+                 textOutput("scatter_instructions"),
                ),
                mainPanel(
                  plotOutput("scatter_plot"),
@@ -60,7 +61,8 @@ ui <- fluidPage(
                              value = 2000,
                              sep = ""),
                  radioButtons("bar_color", "Choose color",
-                              choices = c("skyblue", "lawngreen", "red", "purple", "gold"))
+                              choices = c("skyblue", "lawngreen", "red", "purple", "gold")),
+                 textOutput("bar_instructions"),
                ),
                mainPanel(
                  plotOutput("bar_plot"),
@@ -77,12 +79,13 @@ ui <- fluidPage(
                              max = 2023,
                              value = 2000,
                              sep = ""),
+                 textOutput("table_instructions"),
                ),
                mainPanel(
                  dataTableOutput("table")
                )
              )
-    )
+    ),
   )
 )
 
@@ -149,6 +152,17 @@ server <- function(input, output){
     }
   })
   
+  output$scatter_instructions <- renderText({
+    paste("Instructions: On the left side of the page, there are two tools you can use to 
+    adjust what the plot shows. The first tool (top to bottom) is to adjust the model of the 
+    car you’re interested in (the list is alphabetical so the first brand is Acura and so on). 
+    The second tool is used to adjust the color of the points (cars) on the graph and has no 
+    impact on the data that is shown. On the graph, there is a trend line (the blue line going through the middle). 
+    This shows a rough average of the price of the car given the model and mileage. A useful way to interpret the data 
+    is that any car above the trend line is overpriced compared to the average, and similarly, any data under the trend 
+    line would be considered a good deal and have a lower price than average.")
+  })
+  
   output$bar_plot <- renderPlot({
     mileage_data <- car_data %>%
       filter(Mileage <= input$mileage) %>%
@@ -178,6 +192,14 @@ server <- function(input, output){
           format(input$mileage, big.mark = ","), " miles is $", format(round(avg_price), nsmall = 0, big.mark = ","), ".")
   })
   
+  output$bar_instructions <- renderText({
+    paste("Instructions: On the left side of the page, there are three tools you can use to adjust what the plot shows. 
+          The first tool (top to bottom) is to adjust the maximum mileage a car can have. In order to change this value 
+          slide the dot right and left (the minimum is 0 miles and the maximum is 150,000 miles). The second tool 
+          (the middle) can be used to determine the year of the car you are interested in. Similar to the mileage tool, 
+          slide the dot right and left to change the year of interest (the oldest models are 1943 and the newest is 2023). 
+          The last tool simply changes the color of the bars on the plot and has no effect on the data about the cars that are being presented.")
+  })
   
   output$table <- renderDataTable({
     car_data %>% 
@@ -190,6 +212,18 @@ server <- function(input, output){
       filter(Year >= input$year_table)
     n_format <- format(nrow(year_data), big.mark = ",")
     paste0("There are ", n_format, " cars that were manufactured later than ", input$year, ".")
+  })
+  
+  output$table_instructions <- renderText({
+    paste("Instructions: Slide the slider to the desired minimum year to be displayed on the table.
+    The table will then display the following information about the cars: Year, Status, Mileage, Price, and MSRP.
+    You can also elect how many entries you want in the table. You can select either 10, 25, 50, and 100 entries to be displayed.
+          The Model will display the model of the vehicle, 
+          Year displays the year of the vehicle, 
+          Status will display whether the vehicle is used or new,
+          Mileage displays the mileage of the vehicle,
+          Price displays the price of the vehicle,
+          and MSRP specifies the drop or increase in the price of the vehicle’s price according to the manufacturer.")
   })
 }
 shinyApp(ui = ui, server = server, options = list(height = 1080))
