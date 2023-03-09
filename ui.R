@@ -9,6 +9,7 @@
 
 library(tidyverse)
 library(shiny)
+library(shinyjs)
 library(plotly)
 library(readr)
 
@@ -16,10 +17,17 @@ car_data <- read_delim("car_data.csv")
 
 # Define UI for application that draws a histogram
 ui <- fluidPage(
+  tags$head(
+    tags$style(HTML("
+      body {
+        background: linear-gradient(to bottom, #ffffff 0%, #7fdfff 50%, #00bfff 100%);
+      }
+    "))),
   titlePanel("Used and New Car Data"),
   tabsetPanel(
     tabPanel("Welcome",
              h2("Welcome to the Used and New Car Dataset"),
+             imageOutput("welcome_image"),
              h4("In this dataset, there are over 100,000 cars for you to look at to figure out
                 which car fits your needs perfectly!"),
              p("This web app shows information regarding", em("various car data from", min(car_data$Year), "to", max(car_data$Year))),
@@ -90,6 +98,14 @@ ui <- fluidPage(
 )
 
 server <- function(input, output){
+  
+  output$welcome_image <- renderImage({
+    
+    list(src = "welcome-image.jpeg",
+         width = 700,
+         height = 400)
+    
+  }, deleteFile = F)
   
   output$welcome_table <- renderDataTable({
     car_data %>% 
