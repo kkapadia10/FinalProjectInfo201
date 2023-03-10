@@ -42,6 +42,7 @@ ui <- fluidPage(
     tabPanel("Scatter Plot",
              sidebarLayout(
                sidebarPanel(
+                 textOutput("scatter_goal"),
                  selectInput("model",
                              "Select A Car Model:",
                              choices = unique(car_data$Model)),
@@ -59,6 +60,7 @@ ui <- fluidPage(
     tabPanel("Bar Plot",
              sidebarLayout(
                sidebarPanel(
+                 textOutput("bar_goal"),
                  sliderInput("mileage", "Mileage on car", 
                              min = 0, 
                              max = 150000, 
@@ -81,6 +83,7 @@ ui <- fluidPage(
     tabPanel("Table",
              sidebarLayout(
                sidebarPanel(
+                 textOutput("table_goal"),
                  textOutput("table_summary"),
                  sliderInput("year_table", "Select your earliest year preference.",
                              min = 1949,
@@ -93,6 +96,35 @@ ui <- fluidPage(
                  dataTableOutput("table")
                )
              )
+    ),
+    tabPanel("Conclusion",
+             h2("Thank you for looking through our web app!"),
+             h3("Before you go, take a look at some trends we discovered through in dataset!"),
+             h4("Analysis"),
+             fluidRow(
+               column(width = 4, plotOutput("acura1_scatter")),
+               column(width = 4, plotOutput("bmw1_scatter")),
+               column(width = 4, plotOutput("acura2_scatter"))
+             ),
+             p("Taking a look at the scatter plot tab, you can see the trend that as Mileage increases, the Price of the car
+               decreases. The above graphs (2022 Acura TLX A-Spec, 2023 BMW 330 i, and 2023 Acura MDX Type S) are good examples of this trend. The datapoints
+               above the blue trendline can be seen as overpriced; while, the datapoints below the trendline can be see as underpriced or good value purchases."),
+             p("Taking a look at the bar plot, we discovered a few trends. First, as the maximum mileage allowed increases, the price of the car decreases (the 
+             more miles on the car, the less it is worth). Next, the newer the car, the more expensive it is. In theory, if you wanted to find a more expensive
+               car, you would look at a newer car with low mileage (and the opposite for a cheaper car)."),
+             p("Finally, looking at the table, we can see all the cars of any given model. While this table does not provide us with a trend, it 
+               is a great resource for buyers to use if they know which model car they want."),
+             h4("Data Quality"),
+             p("In terms of data quality and reliability, the dataset does not include a few values from the Mileage, Price, and MSRP categories.
+              However, even with this the data is still very reliable because for every category a majority of the data is provided and accurate.
+               This dataset definitely provides unbaised results because there is no way to skew or lie about the Mileage, Price, Status, Year, etc. 
+               of a car. Additionally, there are no ethical issues with using this data as this is public information and no population groups were harmed to 
+              collect this data."),
+             h4("Future Ideas"),
+             p("To advance this web app in the future, there are a few potential fixes or implementations. To start, we can add the dealer information for each car
+               so that the user can easily purchase the car if they desire. Additionally, another improvement would be to inclue reviews of the car from the previous
+               owners. If the car is used, we should try to get the previous owner to say what they liked/disliked about the car. Finally, we should try to expand
+               this web app to also look at motorcycles. Doing so would expand our target market to include those searching for a motorcycle.")
     ),
   )
 )
@@ -114,7 +146,6 @@ server <- function(input, output){
   
   # Initialize a global variable for the slope
   slope <- NULL
-  
   # Define the scatter plot output
   output$scatter_plot <- renderPlot({
     model_data <- car_data %>%
@@ -168,6 +199,10 @@ server <- function(input, output){
     }
   })
   
+  output$scatter_goal <- renderText({
+    paste("The goal of this scatter plot is to examine the relationship beween price and mileage for various car models.")
+  })
+  
   output$scatter_instructions <- renderText({
     paste("Instructions: On the left side of the page, there are two tools you can use to 
     adjust what the plot shows. The first tool (top to bottom) is to adjust the model of the 
@@ -205,7 +240,13 @@ server <- function(input, output){
     avg_price <- mean(price_data$num_price)
     paste0(format(n_non_missing, big.mark = ","), " cars have at most ", 
           format(input$mileage, big.mark = ","), " miles. For ", input$year_bar,", the average price of cars under ", 
-          format(input$mileage, big.mark = ","), " miles is $", format(round(avg_price), nsmall = 0, big.mark = ","), ".")
+          format(input$mileage, big.mark = ","), " miles is $", format(round(avg_price), nsmall = 0, big.mark = ","), ". 
+          As the maximum mileage allowed increases, the price of the car decreases (the more miles on the car, the less it is worth).
+           Next, the newer the car, the more expensive it is.")
+  })
+  
+  output$bar_goal <- renderText({
+    paste("The goal of this bar plot is to examine the relationship between price and manufacture year.")
   })
   
   output$bar_instructions <- renderText({
@@ -213,7 +254,8 @@ server <- function(input, output){
           The first tool (top to bottom) is to adjust the maximum mileage a car can have. In order to change this value 
           slide the dot right and left (the minimum is 0 miles and the maximum is 150,000 miles). The second tool 
           (the middle) can be used to determine the year of the car you are interested in. Similar to the mileage tool, 
-          slide the dot right and left to change the year of interest (the oldest models are 1943 and the newest is 2023). 
+          slide the dot right and left to change the year of interest (the oldest models are 1943 and the newest is 2023). Changing the second tool,
+          changes the year we are looking at to find the average car value.
           The last tool simply changes the color of the bars on the plot and has no effect on the data about the cars that are being presented.")
   })
   
@@ -230,6 +272,10 @@ server <- function(input, output){
     paste0("There are ", n_format, " cars that were manufactured later than ", input$year, ".")
   })
   
+  output$table_goal <- renderText({
+    paste("The goal of this table is to look at all the cars of a specific model.")
+  })
+  
   output$table_instructions <- renderText({
     paste("Instructions: Slide the slider to the desired minimum year to be displayed on the table.
     The table will then display the following information about the cars: Year, Status, Mileage, Price, and MSRP.
@@ -240,6 +286,62 @@ server <- function(input, output){
           Mileage displays the mileage of the vehicle,
           Price displays the price of the vehicle,
           and MSRP specifies the drop or increase in the price of the vehicle’s price according to the manufacturer.")
+  })
+  
+  output$acura1_scatter <- renderPlot({
+    acura1_data <- car_data %>%
+      filter(!grepl('Not available', Mileage)) %>%
+      filter(Model == "2022 Acura TLX A-Spec") %>% 
+      mutate(Mileage = as.numeric(str_replace_all(Mileage, "[^[:digit:]]", "")),
+             Price = as.numeric(str_replace_all(Price, "[^[:digit:]]", ""))) %>%
+      na.omit()
+    p <- ggplot(acura1_data, aes(x = Mileage, y = Price)) +
+      geom_point() +
+      labs(x = "Mileage of Car (in miles)", y = "Price of Car (in $)", 
+           title = "Car Price vs Mileage for the 2022 Acura TLX A-Spec")
+      # Update the global slope variable
+      slope <<- round(coef(summary(lm(Price ~ Mileage, data = acura1_data)))[2, 1], 2)
+      p <- p + geom_smooth(method = "lm", se = FALSE) +  # add linear regression line
+        geom_text(x = Inf, y = Inf, hjust = 1, vjust = 1, 
+                  label = paste0("Slope: ", slope))  # add slope value
+    p
+  })
+  output$bmw1_scatter <- renderPlot({
+    bmw1_data <- car_data %>%
+      filter(!grepl('Not available', Mileage)) %>%
+      filter(Model == "2023 BMW 330 i") %>% 
+      mutate(Mileage = as.numeric(str_replace_all(Mileage, "[^[:digit:]]", "")),
+             Price = as.numeric(str_replace_all(Price, "[^[:digit:]]", ""))) %>%
+      na.omit()
+    p <- ggplot(bmw1_data, aes(x = Mileage, y = Price)) +
+      geom_point() +
+      labs(x = "Mileage of Car (in miles)", y = "Price of Car (in $)", 
+           title = "Car Price vs Mileage for the 2023 BMW 330 i")
+    # Update the global slope variable
+    slope <<- round(coef(summary(lm(Price ~ Mileage, data = bmw1_data)))[2, 1], 2)
+    p <- p + geom_smooth(method = "lm", se = FALSE) +  # add linear regression line
+      geom_text(x = Inf, y = Inf, hjust = 1, vjust = 1, 
+                label = paste0("Slope: ", slope))  # add slope value
+    p
+  })
+  
+  output$acura2_scatter <- renderPlot({
+    acura2_data <- car_data %>%
+      filter(!grepl('Not available', Mileage)) %>%
+      filter(Model == "2023 Acura MDX Type S") %>% 
+      mutate(Mileage = as.numeric(str_replace_all(Mileage, "[^[:digit:]]", "")),
+             Price = as.numeric(str_replace_all(Price, "[^[:digit:]]", ""))) %>%
+      na.omit()
+    p <- ggplot(acura2_data, aes(x = Mileage, y = Price)) +
+      geom_point() +
+      labs(x = "Mileage of Car (in miles)", y = "Price of Car (in $)", 
+           title = "Car Price vs Mileage for the 2023 Acura MDX Type S")
+    # Update the global slope variable
+    slope <<- round(coef(summary(lm(Price ~ Mileage, data = acura2_data)))[2, 1], 2)
+    p <- p + geom_smooth(method = "lm", se = FALSE) +  # add linear regression line
+      geom_text(x = Inf, y = Inf, hjust = 1, vjust = 1, 
+                label = paste0("Slope: ", slope))  # add slope value
+    p
   })
 }
 shinyApp(ui = ui, server = server, options = list(height = 1080))
