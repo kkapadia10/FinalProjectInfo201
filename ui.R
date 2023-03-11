@@ -134,11 +134,11 @@ ui <- fluidPage(
     tabPanel("Conclusion",
              h2("Thank you for looking through our web app!"),
              h3("Before you go, take a look at some trends we discovered through in dataset!"),
-             h4("Analysis"),
              fluidRow(
                column(width = 4, plotOutput("acura1_scatter")),
                column(width = 4, plotOutput("bmw1_scatter")),
-               column(width = 4, plotOutput("acura2_scatter"))
+               column(width = 4, plotOutput("acura2_scatter")),
+             h4("Analysis"),
              ),
              p("Taking a look at the scatter plot tab, you can see the trend that as Mileage increases, the Price of the car
                decreases. The above graphs (2022 Acura TLX A-Spec, 2023 BMW 330 i, and 2023 Acura MDX Type S) are good examples of this trend. The datapoints
